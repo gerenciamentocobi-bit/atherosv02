@@ -27,7 +27,7 @@ function PostCard({ post }: { post: Post }) {
   return (
     <Link href={`/blog/${post.slug.current}`} className={styles.card}>
       <div className={styles.cardImage}>
-        {post.mainImage ? (
+        {(post.mainImage as any)?.asset ? (
           <Image
             src={urlFor(post.mainImage).width(600).height(380).url()}
             alt={(post.mainImage as any)?.alt || post.title}
@@ -218,7 +218,12 @@ export default function BlogClientPage({
           ) : (
             <div className={styles.emptyState}>
               <span>🔍</span>
-              <p>{copy.empty} <strong>"{search || activeCategory}"</strong></p>
+              <p>
+                {copy.empty}
+                {(search || activeCategory !== 'all') && (
+                  <> <strong>"{search || activeCategory}"</strong></>
+                )}
+              </p>
               <button className={styles.emptyReset} onClick={() => { handleSearch(''); handleCat('all'); }}>
                 {copy.reset}
               </button>

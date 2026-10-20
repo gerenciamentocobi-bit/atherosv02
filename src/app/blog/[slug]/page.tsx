@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PortableText } from '@portabletext/react';
 import type { Metadata } from 'next';
+import { draftMode } from 'next/headers';
+import DraftPreview from '@/components/DraftPreview/DraftPreview';
 import { getPostBySlug, getRelatedPosts, estimateReadTime, urlFor } from '@/lib/sanity';
 import styles from './post.module.css';
 
@@ -35,7 +37,8 @@ function formatDate(dateStr: string): string {
 
 export default async function PostPage({ params }: Props) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const { isEnabled: isDraft } = await draftMode();
+  const post = await getPostBySlug(slug, isDraft);
   if (!post) notFound();
 
   const related = post.category
@@ -55,7 +58,7 @@ export default async function PostPage({ params }: Props) {
           <div className={styles.heroMeta}>
             {post.author?.name && (
               <span className={styles.author}>
-                {post.author.photo && (
+                {(post.author.photo as any)?.asset && (
                   <Image
                     src={urlFor(post.author.photo).width(36).height(36).url()}
                     alt={post.author.name}
@@ -75,7 +78,7 @@ export default async function PostPage({ params }: Props) {
       </section>
 
       {/* ── Main Image ── */}
-      {post.mainImage && (
+      {(post.mainImage as any)?.asset && (
         <div className={`container ${styles.mainImageWrap}`}>
           <div className={styles.mainImage}>
             <Image
@@ -100,7 +103,7 @@ export default async function PostPage({ params }: Props) {
                 value={post.body as any}
                 components={{
                   types: {
-                    image: ({ value }) => (
+                    image: ({ value }) => !value?.asset ? null : (
                       <figure className={styles.inlineImg}>
                         <Image
                           src={urlFor(value).width(800).url()}
@@ -166,7 +169,7 @@ export default async function PostPage({ params }: Props) {
             <div className={styles.relatedGrid}>
               {related.map((r) => (
                 <Link key={r._id} href={`/blog/${r.slug.current}`} className={styles.relatedCard}>
-                  {r.mainImage && (
+                  {(r.mainImage as any)?.asset && (
                     <div className={styles.relatedImg}>
                       <Image
                         src={urlFor(r.mainImage).width(400).height(240).url()}
@@ -187,6 +190,7 @@ export default async function PostPage({ params }: Props) {
           </div>
         </section>
       )}
+      <DraftPreview />
     </main>
   );
 }

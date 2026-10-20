@@ -15,12 +15,25 @@ export const config = {
   token: token || undefined,
 };
 
+if (!isSanityConfigured) {
+  console.warn('[sanity] NEXT_PUBLIC_SANITY_PROJECT_ID ausente ou inválido — o blog ficará vazio.');
+}
+
 export const sanityClient = isSanityConfigured ? createClient(config) : null;
 
 const builder = isSanityConfigured ? createImageUrlBuilder(config) : null;
 
 export function urlFor(source: SanityImageSource) {
-  if (!builder || !source) return { url: () => '' } as any;
+  const empty = {
+    url: () => '',
+    width: () => empty,
+    height: () => empty,
+    fit: () => empty,
+    auto: () => empty,
+    quality: () => empty,
+    format: () => empty,
+  } as any;
+  if (!builder || !source || (typeof source === 'object' && !source.asset && !source._ref && !source._id)) return empty;
   return builder.image(source);
 }
 
@@ -65,7 +78,7 @@ export async function getAllPosts(): Promise<Post[]> {
   );
 }
 
-const POST_QUERY = `*[_type == "post" && slug.current == $slug && (!defined(publishedAt) || publishedAt <= now())][0] {
+const POST_FIELDS = `
   _id,
   title, titleEn,
   slug,
@@ -75,11 +88,20 @@ const POST_QUERY = `*[_type == "post" && slug.current == $slug && (!defined(publ
   mainImage,
   author,
   body, bodyEn
-}`;
+`;
 
-/** Post individual por slug */
-export async function getPostBySlug(slug: string): Promise<Post | null> {
+const POST_QUERY = `*[_type == "post" && slug.current == $slug && (!defined(publishedAt) || publishedAt <= now())][0] {${POST_FIELDS}}`;
+const POST_PREVIEW_QUERY = `*[_type == "post" && slug.current == $slug][0] {${POST_FIELDS}}`;
+
+/** Post individual por slug. Em modo rascunho (preview) inclui posts não publicados. */
+export async function getPostBySlug(slug: string, preview = false): Promise<Post | null> {
   if (!sanityClient) return null;
+  if (preview) {
+    const result = await sanityClient
+      .withConfig({ perspective: 'drafts', useCdn: false, token: token || undefined })
+      .fetch(POST_PREVIEW_QUERY, { slug }, { cache: 'no-store' });
+    return result ?? null;
+  }
   const result = await sanityClient.fetch(POST_QUERY, { slug });
   return result ?? null;
 }
