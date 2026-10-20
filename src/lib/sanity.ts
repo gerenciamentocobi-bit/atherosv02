@@ -11,6 +11,8 @@ export const config = {
   projectId: isSanityConfigured ? projectId : 'placeholder',
   dataset,
   apiVersion: '2024-01-01',
+  // Com token e apiVersion antiga, o padrão é 'raw' (inclui rascunhos). Forçamos só publicados.
+  perspective: 'published' as const,
   useCdn: token ? false : process.env.NODE_ENV === 'production',
   token: token || undefined,
 };
